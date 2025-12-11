@@ -182,6 +182,7 @@ export interface ConversationTurn {
   timestamp: Date;
   role: 'user' | 'agent' | 'system';
   text: string;
+  sourceText?: string;
   isFinal: boolean;
   toolUseRequest?: LiveServerToolCall;
   toolUseResponse?: LiveClientToolResponse;

@@ -87,7 +87,7 @@ export default function DatabaseBridge() {
 
     if (!connected) return;
 
-    // The consumer loop that processes the queue sequentially
+    // The consumer loop that processes the queue sequentially (AUDIO ONLY)
     const processQueueLoop = async () => {
       if (isProcessingRef.current) return;
       isProcessingRef.current = true;
@@ -118,12 +118,8 @@ export default function DatabaseBridge() {
             continue;
           }
 
-          // Log to console as a "Script Item"
-          addTurn({
-            role: 'system',
-            text: scriptedText,
-            isFinal: true
-          });
+          // NOTE: We do NOT addTurn here anymore. UI is handled in processNewData.
+          // This loop is purely for feeding audio to the model.
 
           // Send to Gemini Live to read
           // client.send() is void but safe due to check above
@@ -133,15 +129,16 @@ export default function DatabaseBridge() {
           queueRef.current.shift();
 
           // Dynamic delay calculation for human-like pacing
+          // Reduced delays slightly to ensure "continuous" reading per user request
           const wordCount = rawText.split(/\s+/).length;
-          const readTime = (wordCount / 2.5) * 1000;
+          const readTime = (wordCount / 2.8) * 1000; // Speed up slightly
           
           // Buffer calculation based on style
-          let bufferBase = 5000;
-          if (style === 'natural') bufferBase = 2000;
-          if (style === 'dramatic') bufferBase = 7000;
+          let bufferBase = 2000; // Reduced default buffer
+          if (style === 'natural') bufferBase = 1000;
+          if (style === 'dramatic') bufferBase = 5000;
 
-          const bufferTime = bufferBase + (Math.random() * 2000); 
+          const bufferTime = bufferBase + (Math.random() * 1000); 
           const totalDelay = readTime + bufferTime;
           
           // Wait before processing next chunk
@@ -160,11 +157,13 @@ export default function DatabaseBridge() {
     }
 
     const processNewData = (data: EburonTTSCurrent) => {
-      const textToRead = (data.translated_text && data.translated_text.trim().length > 0) 
+      const translation = (data.translated_text && data.translated_text.trim().length > 0) 
         ? data.translated_text 
         : data.source_text;
 
-      if (!data || !textToRead) return;
+      const source = data.source_text;
+
+      if (!data || !translation) return;
 
       if (lastProcessedIdRef.current === data.id) {
         return;
@@ -172,7 +171,16 @@ export default function DatabaseBridge() {
 
       lastProcessedIdRef.current = data.id;
       
-      const segments = segmentText(textToRead);
+      // 1. Instantly Update UI with both Source and Translation
+      addTurn({
+        role: 'system',
+        text: translation, // Display the clean translation
+        sourceText: source, // Display the source text
+        isFinal: true
+      });
+
+      // 2. Queue for Audio Processing (segments)
+      const segments = segmentText(translation);
       
       if (segments.length > 0) {
         queueRef.current.push(...segments);

@@ -187,6 +187,21 @@ export default function StreamingConsole() {
             <div className="transcription-view teleprompter-mode" ref={scrollRef}>
               {scriptTurns.map((t, i) => (
                 <div key={i} className="transcription-entry system">
+                  {/* Source Text Rendering */}
+                  {t.sourceText && (
+                    <div className="source-text" style={{ 
+                        fontSize: '0.95rem', 
+                        color: 'var(--text-secondary)', 
+                        marginBottom: '8px',
+                        fontStyle: 'italic',
+                        opacity: 0.8,
+                        borderLeft: '2px solid var(--accent-blue)',
+                        paddingLeft: '8px'
+                      }}>
+                      {t.sourceText}
+                    </div>
+                  )}
+                  {/* Translated Text Rendering */}
                   <div className="transcription-text-content">
                     <ScriptReader text={t.text} />
                   </div>
