@@ -9,13 +9,12 @@ const SUPABASE_KEY = 'sb_publishable_fc4iX_EGxN1Pzc4Py_SOog_8KJyvdQU';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-export interface EburonTTSCurrent {
+export interface Transcript {
   id: string;
-  client_id: string | null;
-  source_text: string;
-  source_lang_code: string | null;
-  source_lang_label: string | null;
-  translated_text: string | null;
-  target_language: string | null;
+  session_id: string;
+  user_id: string;
+  source_language: string;
+  full_transcript_text: string;
+  created_at: string;
   updated_at: string;
 }

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 import { useEffect, useRef } from 'react';
-import { supabase, EburonTTSCurrent } from '../lib/supabase';
+import { supabase, Transcript } from '../lib/supabase';
 import { useLiveAPIContext } from '../contexts/LiveAPIContext';
 import { useLogStore, useSettings } from '../lib/state';
 
@@ -156,14 +156,12 @@ export default function DatabaseBridge() {
       processQueueLoop();
     }
 
-    const processNewData = (data: EburonTTSCurrent) => {
-      const translation = (data.translated_text && data.translated_text.trim().length > 0) 
-        ? data.translated_text 
-        : data.source_text;
+    const processNewData = (data: Transcript) => {
+      // In the new table, we only have full_transcript_text (source).
+      // We rely on Gemini to translate it based on system prompt.
+      const source = data.full_transcript_text;
 
-      const source = data.source_text;
-
-      if (!data || !translation) return;
+      if (!data || !source) return;
 
       if (lastProcessedIdRef.current === data.id) {
         return;
@@ -171,16 +169,19 @@ export default function DatabaseBridge() {
 
       lastProcessedIdRef.current = data.id;
       
-      // 1. Instantly Update UI with both Source and Translation
+      // 1. Instantly Update UI
+      // Since we don't have a translation yet, we display the source in both fields
+      // or just rely on the script view to show what's being processed.
       addTurn({
         role: 'system',
-        text: translation, // Display the clean translation
-        sourceText: source, // Display the source text
+        text: source, 
+        sourceText: source, 
         isFinal: true
       });
 
       // 2. Queue for Audio Processing (segments)
-      const segments = segmentText(translation);
+      // Gemini will receive this text and translate it aloud.
+      const segments = segmentText(source);
       
       if (segments.length > 0) {
         queueRef.current.push(...segments);
@@ -190,14 +191,14 @@ export default function DatabaseBridge() {
 
     const fetchLatest = async () => {
       const { data, error } = await supabase
-        .from('eburon_tts_current')
+        .from('transcripts')
         .select('*')
         .order('updated_at', { ascending: false })
         .limit(1)
         .single();
       
       if (!error && data) {
-        processNewData(data as EburonTTSCurrent);
+        processNewData(data as Transcript);
       }
     };
 
@@ -214,10 +215,10 @@ export default function DatabaseBridge() {
       .channel('bridge-realtime-opt')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'eburon_tts_current' },
+        { event: '*', schema: 'public', table: 'transcripts' },
         (payload) => {
           if (payload.new) {
-             processNewData(payload.new as EburonTTSCurrent);
+             processNewData(payload.new as Transcript);
           }
         }
       )

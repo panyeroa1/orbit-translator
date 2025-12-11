@@ -6,7 +6,7 @@ import { useSettings, useUI, VoiceStyle } from '@/lib/state';
 import c from 'classnames';
 import { useLiveAPIContext } from '@/contexts/LiveAPIContext';
 import { useEffect, useState } from 'react';
-import { supabase, EburonTTSCurrent } from '@/lib/supabase';
+import { supabase, Transcript } from '@/lib/supabase';
 import { SUPPORTED_LANGUAGES, AVAILABLE_VOICES } from '@/lib/constants';
 
 export default function Sidebar() {
@@ -19,12 +19,12 @@ export default function Sidebar() {
     backgroundPadVolume, setBackgroundPadVolume
   } = useSettings();
   const { connected } = useLiveAPIContext();
-  const [dbData, setDbData] = useState<EburonTTSCurrent | null>(null);
+  const [dbData, setDbData] = useState<Transcript | null>(null);
 
   useEffect(() => {
     // Initial fetch
     supabase
-      .from('eburon_tts_current')
+      .from('transcripts')
       .select('*')
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -38,10 +38,10 @@ export default function Sidebar() {
       .channel('sidebar-db-monitor')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'eburon_tts_current' },
+        { event: '*', schema: 'public', table: 'transcripts' },
         (payload) => {
           if (payload.new) {
-             setDbData(payload.new as EburonTTSCurrent);
+             setDbData(payload.new as Transcript);
           }
         }
       )
@@ -68,16 +68,18 @@ export default function Sidebar() {
               {dbData ? (
                 <>
                   <div style={{ marginBottom: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '10px', textTransform: 'uppercase' }}>Current ID: {dbData.id}</div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '10px', textTransform: 'uppercase' }}>Current ID: {dbData.id.substring(0, 8)}...</div>
                     <div style={{ color: 'var(--text-secondary)', fontSize: '10px' }}>{new Date(dbData.updated_at).toLocaleTimeString()}</div>
                   </div>
                   <div style={{ marginBottom: '12px' }}>
-                     <strong style={{color: 'var(--accent-blue)'}}>Source ({dbData.source_lang_code || '?'}):</strong><br />
-                     <div style={{ color: 'var(--text-secondary)', marginTop: '4px', fontStyle: 'italic' }}>"{dbData.source_text}"</div>
+                     <strong style={{color: 'var(--accent-blue)'}}>Source ({dbData.source_language || '?'}):</strong><br />
+                     <div style={{ color: 'var(--text-main)', marginTop: '4px', fontStyle: 'italic', maxHeight: '100px', overflowY: 'auto' }}>
+                       "{dbData.full_transcript_text?.substring(0, 200)}{dbData.full_transcript_text?.length > 200 ? '...' : ''}"
+                     </div>
                   </div>
                   <div>
-                    <strong style={{color: 'var(--accent-green)'}}>Target ({dbData.target_language || '?'}):</strong><br />
-                    <div style={{ color: 'var(--text-main)', marginTop: '4px' }}>{dbData.translated_text || '...'}</div>
+                    <strong style={{color: 'var(--accent-green)'}}>Processing Status:</strong><br />
+                    <div style={{ color: 'var(--text-secondary)', marginTop: '4px' }}>Sent to Audio Engine</div>
                   </div>
                 </>
               ) : (
@@ -138,22 +140,18 @@ export default function Sidebar() {
 
               <div>
                 <label style={{display: 'block', marginBottom: '8px', fontSize: '0.85rem'}}>Voice Style</label>
-                <select
+                {/* Reverted to Select for simplicity or keeping text input as per previous request? 
+                    The previous request asked for text input. I will preserve the text input from previous state 
+                    but since I don't see the text input code in the 'existing file' provided in the PROMPT (it showed the old Select), 
+                    I will re-implement the Text Input to respect the user's previous desire. 
+                */}
+                <input
+                  type="text"
                   value={voiceStyle}
-                  onChange={e => setVoiceStyle(e.target.value as VoiceStyle)}
-                  style={{
-                    appearance: 'none',
-                    backgroundImage: `var(--select-arrow)`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 12px center',
-                    backgroundSize: '1em',
-                    paddingRight: '30px'
-                  }}
-                >
-                  <option value="natural">Natural (Standard)</option>
-                  <option value="breathy">Breathy (Eburon Default)</option>
-                  <option value="dramatic">Dramatic (Slow)</option>
-                </select>
+                  onChange={e => setVoiceStyle(e.target.value as any)}
+                  placeholder="e.g. Soft and engaging"
+                  style={{width: '100%'}}
+                />
               </div>
 
               <div style={{marginTop: '20px', padding: '12px', background: 'var(--bg-panel-secondary)', borderRadius: '8px', fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic'}}>
