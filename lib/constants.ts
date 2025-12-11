@@ -26,7 +26,40 @@ export const DEFAULT_LIVE_API_MODEL =
 
 export const DEFAULT_VOICE = 'Orus';
 
-export const AVAILABLE_VOICES = ['Zephyr', 'Puck', 'Charon', 'Luna', 'Nova', 'Kore', 'Fenrir',	'Leda', 'Orus','Aoede','Callirrhoe','Autonoe','Enceladus','Iapetus','Umbriel','Algieba','Despina','Erinome','Algenib','Rasalgethi','Laomedeia','Achernar','Alnilam','Schedar','Gacrux','Pulcherrima','Achird',	'Zubenelgenubi','Vindemiatrix','Sadachbia','Sadaltager','Sulafat'];
+export const AVAILABLE_VOICES = [
+  'Zephyr',
+  'Puck',
+  'Charon',
+  'Luna',
+  'Nova',
+  'Kore',
+  'Fenrir',
+  'Leda',
+  'Orus',
+  'Aoede',
+  'Callirrhoe',
+  'Autonoe',
+  'Enceladus',
+  'Iapetus',
+  'Umbriel',
+  'Algieba',
+  'Despina',
+  'Erinome',
+  'Algenib',
+  'Rasalgethi',
+  'Laomedeia',
+  'Achernar',
+  'Alnilam',
+  'Schedar',
+  'Gacrux',
+  'Pulcherrima',
+  'Achird',
+  'Zubenelgenubi',
+  'Vindemiatrix',
+  'Sadachbia',
+  'Sadaltager',
+  'Sulafat',
+];
 
 export const SUPPORTED_LANGUAGES = [
   'Afrikaans',
@@ -71,5 +104,99 @@ export const SUPPORTED_LANGUAGES = [
   'Thai',
   'Turkish',
   'Ukrainian',
-  'Vietnamese'
+  'Vietnamese',
+
+  // Additional global & regional languages
+  'Albanian',
+  'Armenian',
+  'Azerbaijani',
+  'Basque',
+  'Belarusian',
+  'Bosnian',
+  'Estonian',
+  'Filipino',
+  'Galician',
+  'Georgian',
+  'Icelandic',
+  'Irish',
+  'Kazakh',
+  'Latvian',
+  'Macedonian',
+  'Maltese',
+  'Mongolian',
+  'Persian (Farsi)',
+  'Persian (Dari)',
+  'Pashto',
+  'Swahili',
+  'Tamil',
+  'Telugu',
+  'Kannada',
+  'Malayalam',
+  'Marathi',
+  'Gujarati',
+  'Urdu',
+  'Burmese',
+  'Khmer',
+  'Lao',
+  'Nepali',
+  'Sinhala',
+  'Uzbek',
+  'Yoruba',
+  'Igbo',
+  'Hausa',
+  'Zulu',
+  'Xhosa',
+
+  // English regional variants
+  'English (Australia)',
+  'English (Canada)',
+  'English (India)',
+  'English (Philippines)',
+  'English (New Zealand)',
+  'English (South Africa)',
+
+  // French regional variants
+  'French (Canada)',
+  'French (Belgium)',
+  'French (Switzerland)',
+
+  // German regional variants
+  'German (Austria)',
+  'German (Switzerland)',
+
+  // Spanish regional variants
+  'Spanish (Spain)',
+  'Spanish (Mexico)',
+  'Spanish (Latin America)',
+  'Spanish (Argentina)',
+  'Spanish (Colombia)',
+
+  // Arabic regional variants
+  'Arabic (Modern Standard)',
+  'Arabic (Gulf)',
+  'Arabic (Egyptian)',
+  'Arabic (Levantine)',
+  'Arabic (Maghrebi)',
+
+  // Chinese regional variants
+  'Chinese (Mandarin, Simplified)',
+  'Chinese (Mandarin, Traditional)',
+  'Chinese (Cantonese, Traditional)',
+
+  // Philippines regional / native languages
+  'Cebuano',
+  'Hiligaynon',
+  'Ilocano',
+  'Kapampangan',
+  'Central Bikol',
+  'Waray-Waray',
+  'Pangasinan',
+  'Chavacano',
+  'Kinaray-a',
+  'Surigaonon',
+  'Tausug',
+  'Maguindanaon',
+  'Maranao',
+  'Aklanon',
+  'Ibanag',
 ];
