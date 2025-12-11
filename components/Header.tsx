@@ -13,7 +13,7 @@ export default function Header() {
     <header>
       <div className="header-left">
         <h1 className="header-logo-text">
-          Zoomie
+          Orbits Translator
           <span className="accent-dot">.</span>
         </h1>
       </div>
