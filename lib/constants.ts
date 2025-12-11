@@ -62,6 +62,7 @@ export const AVAILABLE_VOICES = [
 ];
 
 export const SUPPORTED_LANGUAGES = [
+  'Taglish (Philippines)', // Default
   'Afrikaans',
   'Arabic',
   'Bengali',

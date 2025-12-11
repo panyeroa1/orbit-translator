@@ -31,6 +31,7 @@ export default function DatabaseBridge() {
   const { voiceStyle } = useSettings();
   
   const lastProcessedIdRef = useRef<string | null>(null);
+  const paragraphCountRef = useRef<number>(0);
   
   const voiceStyleRef = useRef(voiceStyle);
   useEffect(() => {
@@ -66,12 +67,18 @@ export default function DatabaseBridge() {
           const style = voiceStyleRef.current;
 
           // Inject Stage Directions based on selected Style
-          // Since we are processing paragraphs, we add pauses between them for natural flow
           let scriptedText = rawText;
-          if (style === 'breathy') {
-            scriptedText = `(soft inhale) ${rawText} ... (pause)`;
-          } else if (style === 'dramatic') {
-             scriptedText = `(slowly) ${rawText} ... (long pause)`;
+          
+          // If the item is just the "(clears throat)" marker, pass it through directly
+          if (rawText === '(clears throat)') {
+             scriptedText = rawText; 
+          } else {
+             // Apply style directions to regular text
+             if (style === 'breathy') {
+               scriptedText = `(soft inhale) ${rawText} ... (pause)`;
+             } else if (style === 'dramatic') {
+                scriptedText = `(slowly) ${rawText} ... (long pause)`;
+             }
           }
 
           // Ensure we don't send empty strings which can break the API
@@ -91,23 +98,24 @@ export default function DatabaseBridge() {
           queueRef.current.shift();
 
           // Dynamic delay calculation for human-like pacing
-          // Adjusted for paragraph-level reading
-          const wordCount = rawText.split(/\s+/).length;
-          // Estimate reading time: avg speaking rate ~150 wpm -> 2.5 words/sec -> ~400ms per word
-          // We assume the model speaks, so we just need a small buffer before sending the next paragraph
-          // The model has an internal queue, but we throttle inputs slightly to avoid overwhelming context
-          const readTime = (wordCount / 3.0) * 1000; 
+          let bufferTime = 1000;
+          let totalDelay = 1000;
           
-          // Buffer calculation based on style
-          let bufferBase = 1500; 
-          if (style === 'natural') bufferBase = 1000;
-          if (style === 'dramatic') bufferBase = 3000;
-
-          const bufferTime = bufferBase; 
-          
-          // For paragraphs, we can wait a bit less than the full read time because 
-          // we want the model to chain them, but we don't want to stack 10 paragraphs instantly.
-          const totalDelay = Math.min(5000, readTime * 0.5) + bufferTime;
+          if (rawText === '(clears throat)') {
+            // Short delay for the throat clearing action
+            totalDelay = 1500; 
+          } else {
+            // Adjusted for paragraph-level reading
+            const wordCount = rawText.split(/\s+/).length;
+            const readTime = (wordCount / 3.0) * 1000; 
+            
+            // Buffer calculation based on style
+            let bufferBase = 1500; 
+            if (style === 'natural') bufferBase = 1000;
+            if (style === 'dramatic') bufferBase = 3000;
+            
+            totalDelay = Math.min(5000, readTime * 0.5) + bufferBase;
+          }
           
           // Wait before processing next chunk
           await new Promise(resolve => setTimeout(resolve, totalDelay));
@@ -151,7 +159,18 @@ export default function DatabaseBridge() {
       const segments = segmentText(source);
       
       if (segments.length > 0) {
-        queueRef.current.push(...segments);
+        segments.forEach(seg => {
+           queueRef.current.push(seg);
+           
+           // Increment global paragraph counter
+           paragraphCountRef.current += 1;
+           
+           // Every 3 paragraphs, inject 'clears throat'
+           if (paragraphCountRef.current > 0 && paragraphCountRef.current % 3 === 0) {
+              queueRef.current.push('(clears throat)');
+           }
+        });
+
         processQueueLoop();
       }
     };
