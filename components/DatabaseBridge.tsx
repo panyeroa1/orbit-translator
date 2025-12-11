@@ -16,52 +16,13 @@ const workerScript = `
   };
 `;
 
-// Helper to segment text into natural reading chunks (2-3 sentences)
+// Helper to segment text into natural reading chunks (Paragraphs)
+// The source data in Supabase is updated per paragraph, so we preserve that structure.
 const segmentText = (text: string): string[] => {
   if (!text) return [];
-
-  let sentences: string[] = [];
-
-  // Robust segmentation using Intl.Segmenter
-  if (typeof Intl !== 'undefined' && 'Segmenter' in Intl) {
-    try {
-      // @ts-ignore - Intl.Segmenter might not be in all TS definitions yet
-      const segmenter = new (Intl as any).Segmenter('en', { granularity: 'sentence' });
-      // @ts-ignore
-      sentences = Array.from(segmenter.segment(text)).map((s: any) => s.segment);
-    } catch (e) {
-      sentences = text.match(/[^.!?]+[.!?]+["']?|[^.!?]+$/g) || [text];
-    }
-  } else {
-     sentences = text.match(/[^.!?]+[.!?]+["']?|[^.!?]+$/g) || [text];
-  }
-  
-  const chunks: string[] = [];
-  let currentChunk = '';
-  let sentenceCount = 0;
-
-  for (const sentence of sentences) {
-    const cleanSentence = sentence.trim();
-    if (!cleanSentence) continue;
-    
-    // Add space if appending to existing chunk
-    if (currentChunk) currentChunk += ' ';
-    currentChunk += cleanSentence;
-    sentenceCount++;
-    
-    // Chunking heuristics
-    if ((sentenceCount >= 2 && currentChunk.length > 150) || sentenceCount >= 3 || currentChunk.length > 250) {
-      chunks.push(currentChunk.trim());
-      currentChunk = '';
-      sentenceCount = 0;
-    }
-  }
-  
-  if (currentChunk.trim()) {
-    chunks.push(currentChunk.trim());
-  }
-  
-  return chunks;
+  // Split by newlines (paragraph breaks) to define render tasks
+  // This ensures the model receives and renders the content paragraph by paragraph
+  return text.split(/\r?\n+/).map(t => t.trim()).filter(t => t.length > 0);
 };
 
 export default function DatabaseBridge() {
@@ -105,6 +66,7 @@ export default function DatabaseBridge() {
           const style = voiceStyleRef.current;
 
           // Inject Stage Directions based on selected Style
+          // Since we are processing paragraphs, we add pauses between them for natural flow
           let scriptedText = rawText;
           if (style === 'breathy') {
             scriptedText = `(soft inhale) ${rawText} ... (pause)`;
@@ -129,17 +91,23 @@ export default function DatabaseBridge() {
           queueRef.current.shift();
 
           // Dynamic delay calculation for human-like pacing
-          // Reduced delays slightly to ensure "continuous" reading per user request
+          // Adjusted for paragraph-level reading
           const wordCount = rawText.split(/\s+/).length;
-          const readTime = (wordCount / 2.8) * 1000; // Speed up slightly
+          // Estimate reading time: avg speaking rate ~150 wpm -> 2.5 words/sec -> ~400ms per word
+          // We assume the model speaks, so we just need a small buffer before sending the next paragraph
+          // The model has an internal queue, but we throttle inputs slightly to avoid overwhelming context
+          const readTime = (wordCount / 3.0) * 1000; 
           
           // Buffer calculation based on style
-          let bufferBase = 2000; // Reduced default buffer
+          let bufferBase = 1500; 
           if (style === 'natural') bufferBase = 1000;
-          if (style === 'dramatic') bufferBase = 5000;
+          if (style === 'dramatic') bufferBase = 3000;
 
-          const bufferTime = bufferBase + (Math.random() * 1000); 
-          const totalDelay = readTime + bufferTime;
+          const bufferTime = bufferBase; 
+          
+          // For paragraphs, we can wait a bit less than the full read time because 
+          // we want the model to chain them, but we don't want to stack 10 paragraphs instantly.
+          const totalDelay = Math.min(5000, readTime * 0.5) + bufferTime;
           
           // Wait before processing next chunk
           await new Promise(resolve => setTimeout(resolve, totalDelay));
@@ -170,8 +138,7 @@ export default function DatabaseBridge() {
       lastProcessedIdRef.current = data.id;
       
       // 1. Instantly Update UI
-      // Since we don't have a translation yet, we display the source in both fields
-      // or just rely on the script view to show what's being processed.
+      // Display the full source text in the script view
       addTurn({
         role: 'system',
         text: source, 
@@ -179,8 +146,8 @@ export default function DatabaseBridge() {
         isFinal: true
       });
 
-      // 2. Queue for Audio Processing (segments)
-      // Gemini will receive this text and translate it aloud.
+      // 2. Queue for Audio Processing (Paragraph segments)
+      // Gemini will receive this text and translate/read it aloud paragraph by paragraph.
       const segments = segmentText(source);
       
       if (segments.length > 0) {
@@ -211,6 +178,7 @@ export default function DatabaseBridge() {
     worker.postMessage('start');
 
     // 2. Setup Realtime Subscription
+    // Event listener for DB changes that triggers the prompt generation function
     const channel = supabase
       .channel('bridge-realtime-opt')
       .on(
