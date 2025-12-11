@@ -28,11 +28,12 @@ import { LiveAPIProvider } from './contexts/LiveAPIContext';
 import DatabaseBridge from './components/DatabaseBridge';
 import { useUI } from './lib/state';
 
-const API_KEY = process.env.GEMINI_API_KEY as string;
+// Per instructions, use process.env.API_KEY directly.
+const API_KEY = process.env.API_KEY as string;
+
+// Optional: Handle missing key gracefully if possible, or throw as before.
 if (typeof API_KEY !== 'string') {
-  throw new Error(
-    'Missing required environment variable: REACT_APP_GEMINI_API_KEY'
-  );
+  console.warn('Missing process.env.API_KEY. The app may fail to connect.');
 }
 
 /**

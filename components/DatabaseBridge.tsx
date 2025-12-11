@@ -176,15 +176,20 @@ export default function DatabaseBridge() {
     };
 
     const fetchLatest = async () => {
-      const { data, error } = await supabase
-        .from('transcripts')
-        .select('*')
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .single();
-      
-      if (!error && data) {
-        processNewData(data as Transcript);
+      try {
+        const { data, error } = await supabase
+          .from('transcripts')
+          .select('*')
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (!error && data) {
+          processNewData(data as Transcript);
+        }
+      } catch (err) {
+        // Suppress network errors from database polling
+        console.warn('Database polling failed', err);
       }
     };
 
@@ -209,7 +214,11 @@ export default function DatabaseBridge() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+         if (status === 'SUBSCRIBED') {
+           // success
+         }
+      });
 
     // 3. Initial Fetch
     fetchLatest();

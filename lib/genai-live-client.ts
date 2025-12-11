@@ -193,8 +193,13 @@ export class GenAILiveClient {
       parts: Array.isArray(parts) ? parts : [parts],
     };
 
-    this.session.sendClientContent({ turns: [content], turnComplete });
-    this.log(`client.send`, parts);
+    try {
+      this.session.sendClientContent({ turns: [content], turnComplete });
+      this.log(`client.send`, parts);
+    } catch (e: any) {
+      console.error('Error sending content:', e);
+      this.emitter.emit('error', new ErrorEvent('Failed to send content'));
+    }
   }
 
   public sendRealtimeInput(chunks: Array<{ mimeType: string; data: string }>) {
@@ -202,24 +207,28 @@ export class GenAILiveClient {
       this.emitter.emit('error', new ErrorEvent('Client is not connected'));
       return;
     }
-    chunks.forEach(chunk => {
-      this.session!.sendRealtimeInput({ media: chunk });
-    });
+    try {
+      chunks.forEach(chunk => {
+        this.session!.sendRealtimeInput({ media: chunk });
+      });
 
-    let hasAudio = false;
-    let hasVideo = false;
-    for (let i = 0; i < chunks.length; i++) {
-      const ch = chunks[i];
-      if (ch.mimeType.includes('audio')) hasAudio = true;
-      if (ch.mimeType.includes('image')) hasVideo = true;
-      if (hasAudio && hasVideo) break;
+      let hasAudio = false;
+      let hasVideo = false;
+      for (let i = 0; i < chunks.length; i++) {
+        const ch = chunks[i];
+        if (ch.mimeType.includes('audio')) hasAudio = true;
+        if (ch.mimeType.includes('image')) hasVideo = true;
+        if (hasAudio && hasVideo) break;
+      }
+
+      let message = 'unknown';
+      if (hasAudio && hasVideo) message = 'audio + video';
+      else if (hasAudio) message = 'audio';
+      else if (hasVideo) message = 'video';
+      this.log(`client.realtimeInput`, message);
+    } catch (e: any) {
+      console.error('Error sending realtime input:', e);
     }
-
-    let message = 'unknown';
-    if (hasAudio && hasVideo) message = 'audio + video';
-    else if (hasAudio) message = 'audio';
-    else if (hasVideo) message = 'video';
-    this.log(`client.realtimeInput`, message);
   }
 
   public sendToolResponse(toolResponse: LiveClientToolResponse) {
@@ -227,16 +236,21 @@ export class GenAILiveClient {
       this.emitter.emit('error', new ErrorEvent('Client is not connected'));
       return;
     }
-    if (
-      toolResponse.functionResponses &&
-      toolResponse.functionResponses.length
-    ) {
-      this.session.sendToolResponse({
-        functionResponses: toolResponse.functionResponses!,
-      });
-    }
+    try {
+      if (
+        toolResponse.functionResponses &&
+        toolResponse.functionResponses.length
+      ) {
+        this.session.sendToolResponse({
+          functionResponses: toolResponse.functionResponses!,
+        });
+      }
 
-    this.log(`client.toolResponse`, { toolResponse });
+      this.log(`client.toolResponse`, { toolResponse });
+    } catch (e: any) {
+      console.error('Error sending tool response:', e);
+      this.emitter.emit('error', new ErrorEvent('Failed to send tool response'));
+    }
   }
 
   protected onMessage(message: LiveServerMessage) {
