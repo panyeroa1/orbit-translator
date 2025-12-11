@@ -1,0 +1,7 @@
+{
+  "name": "orbits-broadcaster-tr",
+  "description": "An interactive sandbox",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
